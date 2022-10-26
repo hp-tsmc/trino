@@ -162,6 +162,7 @@ import static io.trino.plugin.deltalake.DeltaLakeColumnType.REGULAR;
 import static io.trino.plugin.deltalake.DeltaLakeColumnType.SYNTHESIZED;
 import static io.trino.plugin.deltalake.DeltaLakeErrorCode.DELTA_LAKE_BAD_WRITE;
 import static io.trino.plugin.deltalake.DeltaLakeErrorCode.DELTA_LAKE_INVALID_SCHEMA;
+import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isCreateTableWithExistingLocationEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isExtendedStatisticsEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeSessionProperties.isTableStatisticsEnabled;
 import static io.trino.plugin.deltalake.DeltaLakeTableProperties.CHECKPOINT_INTERVAL_PROPERTY;
@@ -270,7 +271,7 @@ public class DeltaLakeMetadata
     // This constant should be used only for a new table
     private static final ProtocolEntry DEFAULT_PROTOCOL = new ProtocolEntry(READER_VERSION, WRITER_VERSION);
     // Matches the dummy column Databricks stores in the metastore
-    private static final List<Column> DUMMY_DATA_COLUMNS = ImmutableList.of(
+    public static final List<Column> DUMMY_DATA_COLUMNS = ImmutableList.of(
             new Column("col", HiveType.toHiveType(new ArrayType(VarcharType.createUnboundedVarcharType())), Optional.empty()));
     private static final Set<ColumnStatisticType> SUPPORTED_STATISTICS_TYPE = ImmutableSet.<ColumnStatisticType>builder()
             .add(TOTAL_SIZE_IN_BYTES)
@@ -726,6 +727,15 @@ public class DeltaLakeMetadata
                 setRollback(() -> deleteRecursivelyIfExists(new HdfsContext(session), hdfsEnvironment, deltaLogDirectory));
                 transactionLogWriter.flush();
             }
+            else {
+                if (!isCreateTableWithExistingLocationEnabled(session)) {
+                    throw new TrinoException(NOT_SUPPORTED, format(
+                            "Using CREATE TABLE with an existing table is deprecated, instead use the system.register_table() procedure." +
+                                    " The CREATE TABLE syntax can be temporarily re-enabled using the %s config property or %s session property.",
+                            DeltaLakeConfig.CREATE_TABLE_WITH_EXISTING_LOCATION_ENABLED,
+                            DeltaLakeSessionProperties.CREATE_TABLE_WITH_EXISTING_LOCATION_ENABLED));
+                }
+            }
         }
         catch (IOException e) {
             throw new TrinoException(DELTA_LAKE_BAD_WRITE, "Unable to access file system for: " + location, e);
@@ -749,7 +759,7 @@ public class DeltaLakeMetadata
                 principalPrivileges);
     }
 
-    private static Map<String, String> deltaTableProperties(ConnectorSession session, String location, boolean external)
+    public static Map<String, String> deltaTableProperties(ConnectorSession session, String location, boolean external)
     {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put(PRESTO_QUERY_ID_NAME, session.getQueryId())
@@ -768,7 +778,7 @@ public class DeltaLakeMetadata
         return properties.buildOrThrow();
     }
 
-    private static void setDeltaStorageFormat(Table.Builder tableBuilder, String location, Path targetPath)
+    public static void setDeltaStorageFormat(Table.Builder tableBuilder, String location, Path targetPath)
     {
         tableBuilder.getStorageBuilder()
                 // this mimics what Databricks is doing when creating a Delta table in the Hive metastore

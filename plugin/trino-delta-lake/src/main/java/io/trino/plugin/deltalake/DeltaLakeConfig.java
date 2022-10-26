@@ -42,6 +42,8 @@ public class DeltaLakeConfig
 {
     public static final String EXTENDED_STATISTICS_ENABLED = "delta.extended-statistics.enabled";
     public static final String VACUUM_MIN_RETENTION = "delta.vacuum.min-retention";
+    public static final String CREATE_TABLE_WITH_EXISTING_LOCATION_ENABLED = "delta.create-table-with-existing-location.enabled";
+    public static final String REGISTER_TABLE_PROCEDURE_ENABLED = "delta.register-table-procedure.enabled";
 
     // Runtime.getRuntime().maxMemory() is not 100% stable and may return slightly different value over JVM lifetime. We use
     // constant so default configuration for cache size is stable.
@@ -74,6 +76,8 @@ public class DeltaLakeConfig
     private String parquetTimeZone = TimeZone.getDefault().getID();
     private DataSize targetMaxFileSize = DataSize.of(1, GIGABYTE);
     private boolean uniqueTableLocation = true;
+    private boolean createTableWithExistingLocationEnabled;
+    private boolean registerTableProcedureEnabled;
 
     public Duration getMetadataCacheTtl()
     {
@@ -429,6 +433,32 @@ public class DeltaLakeConfig
     public DeltaLakeConfig setUniqueTableLocation(boolean uniqueTableLocation)
     {
         this.uniqueTableLocation = uniqueTableLocation;
+        return this;
+    }
+
+    public boolean isCreateTableWithExistingLocationEnabled()
+    {
+        return createTableWithExistingLocationEnabled;
+    }
+
+    @Config(CREATE_TABLE_WITH_EXISTING_LOCATION_ENABLED)
+    @ConfigDescription("Enable using the CREATE TABLE statement to register an existing table")
+    public DeltaLakeConfig setCreateTableWithExistingLocationEnabled(boolean createTableWithExistingLocationEnabled)
+    {
+        this.createTableWithExistingLocationEnabled = createTableWithExistingLocationEnabled;
+        return this;
+    }
+
+    public boolean isRegisterTableProcedureEnabled()
+    {
+        return registerTableProcedureEnabled;
+    }
+
+    @Config(REGISTER_TABLE_PROCEDURE_ENABLED)
+    @ConfigDescription("Allow users to call the register_table procedure")
+    public DeltaLakeConfig setRegisterTableProcedureEnabled(boolean registerTableProcedureEnabled)
+    {
+        this.registerTableProcedureEnabled = registerTableProcedureEnabled;
         return this;
     }
 }
