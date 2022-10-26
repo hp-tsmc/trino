@@ -26,6 +26,7 @@ import java.util.Set;
 
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.testing.sql.TestTable.randomTableSuffix;
 import static java.lang.String.format;
@@ -50,7 +51,9 @@ public class TestDeltaLakeDelete
         QueryRunner queryRunner = DeltaLakeQueryRunner.createS3DeltaLakeQueryRunner(
                 DELTA_CATALOG,
                 SCHEMA,
-                ImmutableMap.of("delta.enable-non-concurrent-writes", "true"),
+                ImmutableMap.of(
+                        "delta.enable-non-concurrent-writes", "true",
+                        REGISTER_TABLE_PROCEDURE_ENABLED, "true"),
                 hiveMinioDataLake.getMinioAddress(),
                 hiveMinioDataLake.getHiveHadoop());
 
@@ -102,7 +105,8 @@ public class TestDeltaLakeDelete
     private void testDeleteMultiFile(String tableName, String resourcePath)
     {
         hiveMinioDataLake.copyResources(resourcePath + "/lineitem", tableName);
-        getQueryRunner().execute(format("CREATE TABLE %s (dummy int) WITH (location = '%s')",
+        getQueryRunner().execute(format("CALL system.register_table('%s', '%s', '%s')",
+                getSession().getSchema().orElseThrow(),
                 tableName,
                 getLocationForTable(tableName)));
 
@@ -200,7 +204,8 @@ public class TestDeltaLakeDelete
         hiveMinioDataLake.copyResources(resourcePath + "/customer", tableName);
         Set<String> originalFiles = hiveMinioDataLake.listFiles(tableName).stream()
                 .collect(toImmutableSet());
-        getQueryRunner().execute(format("CREATE TABLE %s (dummy int) WITH (location = '%s')",
+        getQueryRunner().execute(format("CALL system.register_table('%s', '%s', '%s')",
+                getSession().getSchema().orElseThrow(),
                 tableName,
                 getLocationForTable(tableName)));
         assertQuery("SELECT * FROM " + tableName, "SELECT * FROM customer");

@@ -37,7 +37,7 @@ public class TestDeltaLakePartitioning
     public void registerTables()
     {
         String dataPath = getClass().getClassLoader().getResource("deltalake/partitions").toExternalForm();
-        getQueryRunner().execute(format("CREATE TABLE partitions (t_string VARCHAR) WITH (location = '%s')", dataPath));
+        getQueryRunner().execute(format("CALL system.register_table('%s', 'partitions', '%s')", getSession().getSchema().orElseThrow(), dataPath));
     }
 
     @Test

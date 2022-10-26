@@ -100,7 +100,7 @@ public class TestDeltaLakeReadTimestamps
     public void registerTables()
     {
         String dataPath = getClass().getClassLoader().getResource("databricks/read_timestamps").toExternalForm();
-        getQueryRunner().execute(format("CREATE TABLE read_timestamps (col_0 VARCHAR, col_1 TIMESTAMP(3) WITH TIME ZONE) WITH (location = '%s')", dataPath));
+        getQueryRunner().execute(format("CALL system.register_table('%s', 'read_timestamps', '%s')", getSession().getSchema().orElseThrow(), dataPath));
     }
 
     @Test

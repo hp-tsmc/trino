@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.testing.Closeables.closeAllSuppress;
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeConnectorFactory.CONNECTOR_NAME;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_ACCESS_KEY;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_SECRET_KEY;
@@ -121,7 +122,7 @@ public final class DeltaLakeQueryRunner
     public static DistributedQueryRunner createDeltaLakeQueryRunner(String catalogName)
             throws Exception
     {
-        return createDeltaLakeQueryRunner(catalogName, ImmutableMap.of(), ImmutableMap.of());
+        return createDeltaLakeQueryRunner(catalogName, ImmutableMap.of(), ImmutableMap.of(REGISTER_TABLE_PROCEDURE_ENABLED, "true"));
     }
 
     public static DistributedQueryRunner createDeltaLakeQueryRunner(String catalogName, Map<String, String> extraProperties, Map<String, String> connectorProperties)

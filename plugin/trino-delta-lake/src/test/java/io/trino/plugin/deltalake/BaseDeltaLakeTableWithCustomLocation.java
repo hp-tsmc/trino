@@ -77,4 +77,20 @@ public abstract class BaseDeltaLakeTableWithCustomLocation
         assertFalse(fileSystem.exists(new Path(filePath)), "The data file should have been removed");
         assertFalse(fileSystem.exists(tableLocation), "The directory corresponding to the dropped Delta Lake table should be removed");
     }
+
+    @Test
+    public void testCreateTableWithExistingLocation()
+    {
+        String tableName = "test_register_table_" + randomTableSuffix();
+
+        assertQuerySucceeds(format("CREATE TABLE %s AS SELECT 1 as a, 'INDIA' as b, true as c", tableName));
+        assertThat(query(format("SELECT * FROM %s", tableName)))
+                .matches("VALUES ROW(INT '1', VARCHAR 'INDIA', BOOLEAN 'true')");
+
+        String tableLocation = (String) computeScalar("SELECT DISTINCT regexp_replace(\"$path\", '/[^/]*$', '') FROM " + tableName);
+
+        assertQueryFails(format("CREATE TABLE %s.%s.%s (dummy int) with (location = '%s')", CATALOG_NAME, SCHEMA, tableName + "_new", tableLocation),
+                ".*Using CREATE TABLE with an existing table is deprecated, instead use the system\\.register_table\\(\\) procedure.*");
+        assertUpdate(format("DROP TABLE %s", tableName));
+    }
 }

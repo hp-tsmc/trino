@@ -53,6 +53,7 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.Sets.union;
 import static io.trino.SystemSessionProperties.ENABLE_DYNAMIC_FILTERING;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.plugin.deltalake.transactionlog.TransactionLogUtil.TRANSACTION_LOG_DIRECTORY;
 import static io.trino.testing.TestingAccessControlManager.TestingPrivilegeType.DELETE_TABLE;
@@ -119,7 +120,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
     protected abstract QueryRunner createDeltaLakeQueryRunner(Map<String, String> connectorProperties)
             throws Exception;
 
-    protected abstract void createTableFromResources(String table, String resourcePath, QueryRunner queryRunner);
+    protected abstract void registerTableFromResources(String table, String resourcePath, QueryRunner queryRunner);
 
     protected abstract String getLocationForTable(String bucketName, String tableName);
 
@@ -138,6 +139,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
                         .put("delta.metadata.cache-ttl", TEST_METADATA_CACHE_TTL_SECONDS + "s")
                         .put("delta.metadata.live-files.cache-ttl", TEST_METADATA_CACHE_TTL_SECONDS + "s")
                         .put("hive.metastore-cache-ttl", TEST_METADATA_CACHE_TTL_SECONDS + "s")
+                        .put(REGISTER_TABLE_PROCEDURE_ENABLED, "true")
                         .buildOrThrow());
 
         queryRunner.execute(format("CREATE SCHEMA %s WITH (location = '%s')", SCHEMA, getLocationForTable(bucketName, SCHEMA)));
@@ -165,7 +167,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
          */
         NON_TPCH_TABLES.forEach(table -> {
             String resourcePath = "databricks/" + table;
-            createTableFromResources(table, resourcePath, queryRunner);
+            registerTableFromResources(table, resourcePath, queryRunner);
         });
 
         return queryRunner;
@@ -409,7 +411,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
 
     private void testDropTable(String tableName, String resourcePath)
     {
-        createTableFromResources(tableName, resourcePath, getQueryRunner());
+        registerTableFromResources(tableName, resourcePath, getQueryRunner());
         assertTrue(getQueryRunner().tableExists(getSession(), tableName));
         assertUpdate("DROP TABLE " + tableName);
         assertFalse(getQueryRunner().tableExists(getSession(), tableName));
@@ -419,12 +421,12 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
     @Test
     public void testDropAndRecreateTable()
     {
-        String tableName = "testDropAndRecreate_" + randomTableSuffix();
-        assertUpdate(format("CREATE TABLE %s (dummy int) WITH (location = '%s')", tableName, getLocationForTable(bucketName, "nation")));
+        String tableName = "test_drop_and_recreate_" + randomTableSuffix();
+        assertUpdate(format("CALL system.register_table('%s', '%s', '%s')", getSession().getSchema().orElseThrow(), tableName, getLocationForTable(bucketName, "nation")));
         assertQuery("SELECT * FROM " + tableName, "SELECT * FROM nation");
-
         assertUpdate("DROP TABLE " + tableName);
-        assertUpdate(format("CREATE TABLE %s (dummy int) WITH (location = '%s')", tableName, getLocationForTable(bucketName, "customer")));
+
+        assertUpdate(format("CALL system.register_table('%s', '%s', '%s')", getSession().getSchema().orElseThrow(), tableName, getLocationForTable(bucketName, "customer")));
         assertQuery("SELECT * FROM " + tableName, "SELECT * FROM customer");
         assertUpdate("DROP TABLE " + tableName);
     }
@@ -432,7 +434,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
     @Test
     public void testDropColumnNotSupported()
     {
-        createTableFromResources("testdropcolumn", "io/trino/plugin/deltalake/testing/resources/databricks/nation", getQueryRunner());
+        registerTableFromResources("testdropcolumn", "io/trino/plugin/deltalake/testing/resources/databricks/nation", getQueryRunner());
         assertQueryFails("ALTER TABLE testdropcolumn DROP COLUMN comment", ".*This connector does not support dropping columns.*");
     }
 
@@ -1355,7 +1357,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
                                 "   partitioned_by = ARRAY[%s]\n" +
                                 ")",
                         getSession().getCatalog().orElseThrow(),
-                        getSession().getSchema().orElseThrow(),
+                        SCHEMA,
                         tableName,
                         newLocation,
                         secondPartitioned ? "'a_number'" : ""));
@@ -1443,7 +1445,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
         skipUnlessInsertsSupported();
 
         String tableName = "test_sep_checkpoint_stats_pruning_struct_stats_" + randomTableSuffix();
-        createTableFromResources(tableName, "databricks/pruning/parquet_struct_statistics", getQueryRunner());
+        registerTableFromResources(tableName, "databricks/pruning/parquet_struct_statistics", getQueryRunner());
         String transactionLogDirectory = format("%s/_delta_log", tableName);
 
         // there should should be one checkpoint already (created by DB)
@@ -1718,7 +1720,7 @@ public abstract class BaseDeltaLakeConnectorSmokeTest
         Set<?> activeFiles = computeActual("SELECT \"$path\" FROM " + tableName).getOnlyColumnAsSet();
         String location = (String) computeScalar(format("SELECT DISTINCT regexp_replace(\"$path\", '/[^/]*$', '') FROM %s", tableName));
         assertUpdate("DROP TABLE " + tableName);
-        assertUpdate(format("CREATE TABLE %s(ignore integer) WITH (location = '%s')", tableName, location));
+        assertUpdate(format("CALL system.register_table('%s', '%s', '%s')", SCHEMA, tableName, location));
         // sanity check
         assertThat(computeActual("SELECT \"$path\" FROM " + tableName).getOnlyColumnAsSet()).as("active files after table recreated")
                 .isEqualTo(activeFiles);

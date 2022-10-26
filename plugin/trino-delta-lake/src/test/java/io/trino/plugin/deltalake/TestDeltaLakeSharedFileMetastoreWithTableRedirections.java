@@ -23,6 +23,7 @@ import org.testng.annotations.AfterClass;
 import java.nio.file.Path;
 import java.util.Map;
 
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeConnectorFactory.CONNECTOR_NAME;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
@@ -50,6 +51,7 @@ public class TestDeltaLakeSharedFileMetastoreWithTableRedirections
                 .put("hive.metastore.catalog.dir", dataDirectory.toString())
                 .put("delta.enable-non-concurrent-writes", "true")
                 .put("delta.hive-catalog-name", "hive_with_redirections")
+                .put(REGISTER_TABLE_PROCEDURE_ENABLED, "true")
                 .buildOrThrow();
 
         queryRunner.createCatalog("delta_with_redirections", CONNECTOR_NAME, deltaLakeProperties);

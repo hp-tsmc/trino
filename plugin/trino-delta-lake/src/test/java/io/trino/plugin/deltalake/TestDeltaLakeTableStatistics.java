@@ -37,10 +37,9 @@ public class TestDeltaLakeTableStatistics
     public void registerTables()
     {
         String dataPath = Resources.getResource("databricks/person").toExternalForm();
-        // register the table for which we have data on disk; note that the schema is actually defined
-        // in the transaction log and is different from what we specify here
+        // register the table for which we have data on disk
         getQueryRunner().execute(
-                format("CREATE TABLE person (name VARCHAR(256), age INTEGER) WITH (location = '%s')", dataPath));
+                format("CALL system.register_table('%s', 'person', '%s')", getSession().getSchema().orElseThrow(), dataPath));
     }
 
     @Test

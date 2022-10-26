@@ -44,6 +44,7 @@ import java.util.stream.IntStream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.plugin.deltalake.transactionlog.TransactionLogUtil.TRANSACTION_LOG_DIRECTORY;
 import static io.trino.spi.type.VarcharType.VARCHAR;
@@ -82,6 +83,7 @@ public abstract class BaseDeltaLakeMinioConnectorTest
                 SCHEMA,
                 ImmutableMap.<String, String>builder()
                         .put("delta.enable-non-concurrent-writes", "true")
+                        .put(REGISTER_TABLE_PROCEDURE_ENABLED, "true")
                         .buildOrThrow(),
                 hiveMinioDataLake.getMinioAddress(),
                 hiveMinioDataLake.getHiveHadoop());
@@ -89,8 +91,7 @@ public abstract class BaseDeltaLakeMinioConnectorTest
         TpchTable.getTables().forEach(table -> {
             String tableName = table.getTableName();
             hiveMinioDataLake.copyResources(resourcePath + tableName, SCHEMA + "/" + tableName);
-            queryRunner.execute(format("CREATE TABLE %1$s.%2$s.%3$s (dummy int) WITH (location = 's3://%4$s/%2$s/%3$s')",
-                    DELTA_CATALOG,
+            queryRunner.execute(format("CALL system.register_table('%1$s', '%2$s', 's3://%3$s/%1$s/%2$s')",
                     SCHEMA,
                     tableName,
                     bucketName));

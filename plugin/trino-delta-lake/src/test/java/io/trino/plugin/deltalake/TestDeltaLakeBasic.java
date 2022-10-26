@@ -57,7 +57,7 @@ public class TestDeltaLakeBasic
         for (String table : Iterables.concat(PERSON_TABLES, OTHER_TABLES)) {
             String dataPath = getTableLocation(table).toExternalForm();
             getQueryRunner().execute(
-                    format("CREATE TABLE %s (name VARCHAR(256), age INTEGER) WITH (location = '%s')", table, dataPath));
+                    format("CALL system.register_table('%s', '%s', '%s')", getSession().getSchema().orElseThrow(), table, dataPath));
         }
     }
 
@@ -123,7 +123,7 @@ public class TestDeltaLakeBasic
         Path tableLocation = Files.createTempFile("bad_person", null);
         copyDirectoryContents(Path.of(getTableLocation("person").toURI()), tableLocation);
         getQueryRunner().execute(
-                format("CREATE TABLE %s (name VARCHAR(256), age INTEGER) WITH (location = '%s')", tableName, tableLocation));
+                format("CALL system.register_table('%s', '%s', '%s')", getSession().getSchema().orElseThrow(), tableName, tableLocation));
 
         // break the table by deleting all its files including transaction log
         deleteRecursively(tableLocation, ALLOW_INSECURE);

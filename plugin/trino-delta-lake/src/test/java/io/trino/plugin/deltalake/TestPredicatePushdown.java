@@ -14,6 +14,7 @@
 package io.trino.plugin.deltalake;
 
 import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.trino.plugin.hive.containers.HiveMinioDataLake;
 import io.trino.spi.QueryId;
@@ -26,10 +27,10 @@ import org.testng.annotations.Test;
 import org.testng.asserts.SoftAssert;
 
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
 
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.createS3DeltaLakeQueryRunner;
 import static io.trino.testing.sql.TestTable.randomTableSuffix;
@@ -47,8 +48,7 @@ public class TestPredicatePushdown
      * This single-file Parquet table has known row groups. See the test
      * resource {@code pushdown/custkey_15rowgroups/README.md} for details.
      */
-    private final TableResource testTable =
-            new TableResource("custkey_15rowgroups", "custkey bigint, mktsegment varchar, phone varchar");
+    private final TableResource testTable = new TableResource("custkey_15rowgroups");
 
     private HiveMinioDataLake hiveMinioDataLake;
 
@@ -61,7 +61,9 @@ public class TestPredicatePushdown
         return createS3DeltaLakeQueryRunner(
                 DELTA_CATALOG,
                 TEST_SCHEMA,
-                Map.of("delta.enable-non-concurrent-writes", "true"),
+                ImmutableMap.of(
+                        "delta.enable-non-concurrent-writes", "true",
+                        REGISTER_TABLE_PROCEDURE_ENABLED, "true"),
                 hiveMinioDataLake.getMinioAddress(),
                 hiveMinioDataLake.getHiveHadoop());
     }
@@ -69,7 +71,7 @@ public class TestPredicatePushdown
     @Test
     public void testSelectPushdown()
     {
-        String table = testTable.create("select_pushdown");
+        String table = testTable.registerTable("select_pushdown");
 
         assertPushdown(
                 format("SELECT custkey FROM %s WHERE custkey > 1495", table),
@@ -88,7 +90,7 @@ public class TestPredicatePushdown
     {
         String table;
 
-        table = testTable.create("delete_pushdown");
+        table = testTable.registerTable("delete_pushdown");
         // Only 5 row groups have data above 1300, so pushdown to Parquet
         // should ensure only 500 rows are read.
         assertPushdownUpdate(
@@ -100,7 +102,7 @@ public class TestPredicatePushdown
                 execute(format("SELECT custkey FROM %s", table)).getOnlyColumnAsSet(),
                 ContiguousSet.closed(1L, 1300L));
 
-        table = testTable.create("delete_pushdown_disjoint");
+        table = testTable.registerTable("delete_pushdown_disjoint");
         // 11 groups have data outside of (500, 1100]
         assertPushdownUpdate(
                 format("DELETE FROM %s WHERE custkey <= 500 OR custkey > 1100", table),
@@ -116,7 +118,7 @@ public class TestPredicatePushdown
     {
         String table;
 
-        table = testTable.create("update_pushdown_simple");
+        table = testTable.registerTable("update_pushdown_simple");
         // 7 row groups include 500 in their range
         assertPushdownUpdate(
                 format("UPDATE %s SET phone = 'phone number' WHERE custkey = 500", table),
@@ -124,7 +126,7 @@ public class TestPredicatePushdown
                 700);
         assertQuery(format("SELECT phone FROM %s WHERE custkey = 500", table), "VALUES 'phone number'");
 
-        table = testTable.create("update_pushdown_range");
+        table = testTable.registerTable("update_pushdown_range");
         // 9 groups have data on (1000, 1200]
         assertPushdownUpdate(
                 format("UPDATE %s SET mktsegment = phone WHERE 1000 < custkey AND custkey <= 1200", table),
@@ -211,27 +213,24 @@ public class TestPredicatePushdown
     private class TableResource
     {
         private final String resourcePath;
-        private final String tableDefinition;
 
-        private TableResource(String resourcePath, String tableDefinition)
+        private TableResource(String resourcePath)
         {
             this.resourcePath = resourcePath;
-            this.tableDefinition = tableDefinition;
         }
 
         /**
          * Create a table using the described resource and the given name prefix.
          * @return The name of the created table.
          */
-        String create(String namePrefix)
+        String registerTable(String namePrefix)
         {
             String name = format("%s_%s", namePrefix, randomTableSuffix());
             hiveMinioDataLake.copyResources(RESOURCE_PATH.resolve(resourcePath).toString(), name);
             getQueryRunner().execute(format(
-                    "CREATE TABLE %2$s (%3$s) WITH (location = 's3://%1$s/%2$s')",
+                    "CALL system.register_table(CURRENT_SCHEMA, '%2$s', 's3://%1$s/%2$s')",
                     BUCKET_NAME,
-                    name,
-                    tableDefinition));
+                    name));
             return name;
         }
     }

@@ -24,6 +24,7 @@ import org.testng.annotations.Test;
 
 import java.util.Map;
 
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_ACCESS_KEY;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_SECRET_KEY;
 import static io.trino.testing.sql.TestTable.randomTableSuffix;
@@ -50,6 +51,7 @@ public class TestDeltaLakeSharedHiveMetastoreWithViews
                 schema,
                 ImmutableMap.<String, String>builder()
                         .put("delta.enable-non-concurrent-writes", "true")
+                        .put(REGISTER_TABLE_PROCEDURE_ENABLED, "true")
                         .buildOrThrow(),
                 hiveMinioDataLake.getMinioAddress(),
                 hiveMinioDataLake.getHiveHadoop());

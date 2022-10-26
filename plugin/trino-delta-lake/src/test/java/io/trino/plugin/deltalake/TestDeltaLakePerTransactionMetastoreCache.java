@@ -52,6 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.google.inject.multibindings.OptionalBinder.newOptionalBinder;
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.trino.plugin.deltalake.DeltaLakeConfig.REGISTER_TABLE_PROCEDURE_ENABLED;
 import static io.trino.plugin.deltalake.DeltaLakeQueryRunner.DELTA_CATALOG;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_ACCESS_KEY;
 import static io.trino.plugin.hive.containers.HiveMinioDataLake.MINIO_SECRET_KEY;
@@ -145,6 +146,7 @@ public class TestDeltaLakePerTransactionMetastoreCache
         deltaLakeProperties.put("hive.s3.path-style-access", "true");
         deltaLakeProperties.put("hive.metastore", "test"); // use test value so we do not get clash with default bindings)
         deltaLakeProperties.put("hive.metastore-timeout", "1m"); // read timed out sometimes happens with the default timeout
+        deltaLakeProperties.put(REGISTER_TABLE_PROCEDURE_ENABLED, "true");
         if (!enablePerTransactionHiveMetastoreCaching) {
             // almost disable the cache; 0 is not allowed as config property value
             deltaLakeProperties.put("delta.per-transaction-metastore-cache-maximum-size", "1");
@@ -157,7 +159,7 @@ public class TestDeltaLakePerTransactionMetastoreCache
             tpchTables.forEach(table -> {
                 String tableName = table.getTableName();
                 hiveMinioDataLake.copyResources("io/trino/plugin/deltalake/testing/resources/databricks/" + tableName, tableName);
-                queryRunner.execute(format("CREATE TABLE %s.%s.%s (dummy int) WITH (location = 's3://%s/%3$s')",
+                queryRunner.execute(format("CALL %1$s.system.register_table('%2$s', '%3$s', 's3://%4$s/%3$s')",
                         DELTA_CATALOG,
                         "default",
                         tableName,
