@@ -16,16 +16,13 @@ package io.trino.tests.product.deltalake.util;
 import io.trino.tempto.query.QueryResult;
 import org.intellij.lang.annotations.Language;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
+import static io.trino.tests.product.deltalake.util.DatabricksVersion.UNKNOWN_RUNTIME_VERSION;
 import static io.trino.tests.product.utils.QueryExecutors.onDelta;
 import static io.trino.tests.product.utils.QueryExecutors.onTrino;
 import static java.lang.String.format;
 
 public final class DeltaLakeTestUtils
 {
-    public static final String DATABRICKS_104_RUNTIME_VERSION = "10.4";
-    public static final String DATABRICKS_91_RUNTIME_VERSION = "9.1";
-
     public static final String DATABRICKS_COMMUNICATION_FAILURE_ISSUE = "https://github.com/trinodb/trino/issues/14391";
     @Language("RegExp")
     public static final String DATABRICKS_COMMUNICATION_FAILURE_MATCH =
@@ -33,9 +30,14 @@ public final class DeltaLakeTestUtils
 
     private DeltaLakeTestUtils() {}
 
-    public static String getDatabricksRuntimeVersion()
+    public static DatabricksVersion getDatabricksRuntimeVersion()
     {
-        return firstNonNull((String) onDelta().executeQuery("SELECT java_method('java.lang.System', 'getenv', 'DATABRICKS_RUNTIME_VERSION')").getOnlyValue(), "unknown");
+        String version = (String) onDelta().executeQuery("SELECT java_method('java.lang.System', 'getenv', 'DATABRICKS_RUNTIME_VERSION')").getOnlyValue();
+        // OSS Spark returns null
+        if (version.equals("null")) {
+            return UNKNOWN_RUNTIME_VERSION;
+        }
+        return DatabricksVersion.createFromString(version);
     }
 
     public static String getColumnCommentOnTrino(String schemaName, String tableName, String columnName)

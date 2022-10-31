@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import io.trino.tempto.BeforeTestWithContext;
 import io.trino.tempto.assertions.QueryAssert.Row;
 import io.trino.testng.services.Flaky;
+import io.trino.tests.product.deltalake.util.DatabricksVersion;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -32,7 +33,7 @@ import static io.trino.tests.product.TestGroups.DELTA_LAKE_DATABRICKS;
 import static io.trino.tests.product.TestGroups.DELTA_LAKE_EXCLUDE_73;
 import static io.trino.tests.product.TestGroups.DELTA_LAKE_OSS;
 import static io.trino.tests.product.TestGroups.PROFILE_SPECIFIC_TESTS;
-import static io.trino.tests.product.deltalake.util.DeltaLakeTestUtils.DATABRICKS_104_RUNTIME_VERSION;
+import static io.trino.tests.product.deltalake.util.DatabricksVersion.DATABRICKS_104_RUNTIME_VERSION;
 import static io.trino.tests.product.deltalake.util.DeltaLakeTestUtils.DATABRICKS_COMMUNICATION_FAILURE_ISSUE;
 import static io.trino.tests.product.deltalake.util.DeltaLakeTestUtils.DATABRICKS_COMMUNICATION_FAILURE_MATCH;
 import static io.trino.tests.product.deltalake.util.DeltaLakeTestUtils.getDatabricksRuntimeVersion;
@@ -44,7 +45,7 @@ import static java.util.Arrays.asList;
 public class TestDeltaLakeDatabricksInsertCompatibility
         extends BaseTestDeltaLakeS3Storage
 {
-    private String databricksRuntimeVersion;
+    private DatabricksVersion databricksRuntimeVersion;
 
     @BeforeTestWithContext
     public void setup()
@@ -411,7 +412,7 @@ public class TestDeltaLakeDatabricksInsertCompatibility
                 assertThat(onTrino().executeQuery("SELECT * FROM " + trinoTableName))
                         .containsOnly(expected);
 
-                if ("ZSTD".equals(compressionCodec) && !databricksRuntimeVersion.equals(DATABRICKS_104_RUNTIME_VERSION)) {
+                if ("ZSTD".equals(compressionCodec) && databricksRuntimeVersion.compareTo(DATABRICKS_104_RUNTIME_VERSION) < 0) {
                     assertQueryFailure(() -> onDelta().executeQuery("SELECT * FROM default." + tableName))
                             .hasMessageContaining("java.lang.ClassNotFoundException: org.apache.hadoop.io.compress.ZStandardCodec");
                 }
