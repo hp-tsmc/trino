@@ -37,6 +37,7 @@ public class BigQueryClientFactory
     private final IdentityCacheMapping identityCacheMapping;
     private final BigQueryCredentialsSupplier credentialsSupplier;
     private final Optional<String> parentProjectId;
+    private final Optional<String> projectId;
     private final boolean caseInsensitiveNameMatching;
     private final ViewMaterializationCache materializationCache;
     private final HeaderProvider headerProvider;
@@ -55,6 +56,7 @@ public class BigQueryClientFactory
         this.credentialsSupplier = requireNonNull(credentialsSupplier, "credentialsSupplier is null");
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.parentProjectId = bigQueryConfig.getParentProjectId();
+        this.projectId = bigQueryConfig.getProjectId();
         this.caseInsensitiveNameMatching = bigQueryConfig.isCaseInsensitiveNameMatching();
         this.materializationCache = requireNonNull(materializationCache, "materializationCache is null");
         this.headerProvider = requireNonNull(headerProvider, "headerProvider is null");
@@ -81,7 +83,7 @@ public class BigQueryClientFactory
     protected BigQuery createBigQuery(ConnectorSession session)
     {
         Optional<Credentials> credentials = credentialsSupplier.getCredentials(session);
-        String billingProjectId = calculateBillingProjectId(parentProjectId, credentials);
+        String billingProjectId = calculateBillingProjectId(parentProjectId, projectId, credentials);
         BigQueryOptions.Builder options = BigQueryOptions.newBuilder()
                 .setHeaderProvider(headerProvider)
                 .setProjectId(billingProjectId);
@@ -90,10 +92,11 @@ public class BigQueryClientFactory
     }
 
     // Note that at this point the config has been validated, which means that option 2 or option 3 will always be valid
-    static String calculateBillingProjectId(Optional<String> configParentProjectId, Optional<Credentials> credentials)
+    static String calculateBillingProjectId(Optional<String> configParentProjectId, Optional<String> configProjectId, Optional<Credentials> credentials)
     {
         // 1. Get from configuration
         return configParentProjectId
+                .or(() -> configProjectId)
                 // 2. Get from the provided credentials, but only ServiceAccountCredentials contains the project id.
                 // All other credentials types (User, AppEngine, GCE, CloudShell, etc.) take it from the environment
                 .orElseGet(() -> credentials

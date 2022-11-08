@@ -25,9 +25,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestBigQueryClientFactory
 {
     @Test
-    public void testConfigurationOnly()
+    public void testParentProjectConfigurationOnly()
     {
-        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.of("pid"), Optional.empty());
+        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.of("parentPid"), Optional.of("pid"), Optional.empty());
+        assertThat(projectId).isEqualTo("parentPid");
+    }
+
+    @Test
+    public void testProjectConfigurationOnly()
+    {
+        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.empty(), Optional.of("pid"), Optional.empty());
         assertThat(projectId).isEqualTo("pid");
     }
 
@@ -35,7 +42,7 @@ public class TestBigQueryClientFactory
     public void testCredentialsOnly()
             throws Exception
     {
-        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.empty(), credentials());
+        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.empty(), Optional.empty(), credentials());
         assertThat(projectId).isEqualTo("presto-bq-credentials-test");
     }
 
@@ -43,8 +50,14 @@ public class TestBigQueryClientFactory
     public void testBothConfigurationAndCredentials()
             throws Exception
     {
-        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.of("pid"), credentials());
+        String projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.of("parentPid"), Optional.of("pid"), credentials());
+        assertThat(projectId).isEqualTo("parentPid");
+
+        projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.empty(), Optional.of("pid"), credentials());
         assertThat(projectId).isEqualTo("pid");
+
+        projectId = BigQueryClientFactory.calculateBillingProjectId(Optional.empty(), Optional.empty(), credentials());
+        assertThat(projectId).isEqualTo("presto-bq-credentials-test");
     }
 
     private Optional<Credentials> credentials()
