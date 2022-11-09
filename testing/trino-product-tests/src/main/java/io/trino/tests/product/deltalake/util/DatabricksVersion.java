@@ -13,65 +13,37 @@
  */
 package io.trino.tests.product.deltalake.util;
 
-import java.util.Objects;
+import com.google.common.collect.ComparisonChain;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class DatabricksVersion
+public record DatabricksVersion(int majorVersion, int minorVersion)
         implements Comparable<DatabricksVersion>
 {
     public static final DatabricksVersion DATABRICKS_113_RUNTIME_VERSION = new DatabricksVersion(11, 3);
     public static final DatabricksVersion DATABRICKS_104_RUNTIME_VERSION = new DatabricksVersion(10, 4);
     public static final DatabricksVersion DATABRICKS_91_RUNTIME_VERSION = new DatabricksVersion(9, 1);
-    public static final DatabricksVersion UNKNOWN_RUNTIME_VERSION = new DatabricksVersion(-1, -1);
 
     private static final Pattern DATABRICKS_VERSION_PATTERN = Pattern.compile("(\\d+)\\.(\\d+)");
 
-    private final int majorVersion;
-    private final int minorVersion;
-
-    public DatabricksVersion(int majorVersion, int minorVersion)
+    public boolean isAtLeast(DatabricksVersion version)
     {
-        this.majorVersion = majorVersion;
-        this.minorVersion = minorVersion;
+        return compareTo(version) >= 0;
+    }
+
+    public boolean isOlderThan(DatabricksVersion version)
+    {
+        return compareTo(version) < 0;
     }
 
     @Override
     public int compareTo(DatabricksVersion other)
     {
-        if (majorVersion < other.majorVersion) {
-            return -1;
-        }
-        if (majorVersion > other.majorVersion) {
-            return 1;
-        }
-
-        return Integer.compare(minorVersion, other.minorVersion);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        DatabricksVersion that = (DatabricksVersion) o;
-        return majorVersion == that.majorVersion && minorVersion == that.minorVersion;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(majorVersion, minorVersion);
-    }
-
-    @Override
-    public String toString()
-    {
-        return majorVersion + "." + minorVersion;
+        return ComparisonChain.start()
+                .compare(majorVersion, other.majorVersion)
+                .compare(minorVersion, other.minorVersion)
+                .result();
     }
 
     public static DatabricksVersion createFromString(String versionString)

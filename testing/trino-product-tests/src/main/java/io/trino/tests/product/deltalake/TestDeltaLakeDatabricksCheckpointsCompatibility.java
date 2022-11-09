@@ -67,7 +67,7 @@ public class TestDeltaLakeDatabricksCheckpointsCompatibility
     {
         super.setUp();
         s3 = new S3ClientFactory().createS3Client(s3ServerType);
-        databricksRuntimeVersion = getDatabricksRuntimeVersion();
+        databricksRuntimeVersion = getDatabricksRuntimeVersion().orElseThrow();
     }
 
     @Test(groups = {DELTA_LAKE_DATABRICKS, PROFILE_SPECIFIC_TESTS})
@@ -208,7 +208,7 @@ public class TestDeltaLakeDatabricksCheckpointsCompatibility
         try {
             // validate that Databricks can see the checkpoint interval
             String showCreateTable;
-            if (databricksRuntimeVersion.compareTo(DATABRICKS_104_RUNTIME_VERSION) >= 0) {
+            if (databricksRuntimeVersion.isAtLeast(DATABRICKS_104_RUNTIME_VERSION)) {
                 showCreateTable = format(
                         "CREATE TABLE spark_catalog.default.%s (\n" +
                                 "  a_number BIGINT,\n" +
@@ -328,7 +328,7 @@ public class TestDeltaLakeDatabricksCheckpointsCompatibility
 
             // Assert min/max queries can be computed from just metadata
             String explainSelectMax = getOnlyElement(onDelta().executeQuery("EXPLAIN SELECT max(root.entry_one) FROM default." + tableName).column(1));
-            String column = databricksRuntimeVersion.compareTo(DATABRICKS_104_RUNTIME_VERSION) >= 0 ? "root.entry_one" : "root.entry_one AS `entry_one`";
+            String column = databricksRuntimeVersion.isAtLeast(DATABRICKS_104_RUNTIME_VERSION) ? "root.entry_one" : "root.entry_one AS `entry_one`";
             assertThat(explainSelectMax).matches("== Physical Plan ==\\s*LocalTableScan \\[max\\(" + column + "\\).*]\\s*");
 
             // check both engines can read both tables
@@ -394,7 +394,7 @@ public class TestDeltaLakeDatabricksCheckpointsCompatibility
 
             // Assert counting non null entries can be computed from just metadata
             String explainCountNotNull = getOnlyElement(onDelta().executeQuery("EXPLAIN SELECT count(root.entry_two) FROM default." + tableName).column(1));
-            String column = databricksRuntimeVersion.compareTo(DATABRICKS_104_RUNTIME_VERSION) >= 0 ? "root.entry_two" : "root.entry_two AS `entry_two`";
+            String column = databricksRuntimeVersion.isAtLeast(DATABRICKS_104_RUNTIME_VERSION) ? "root.entry_two" : "root.entry_two AS `entry_two`";
             assertThat(explainCountNotNull).matches("== Physical Plan ==\\s*LocalTableScan \\[count\\(" + column + "\\).*]\\s*");
 
             // check both engines can read both tables
@@ -525,7 +525,7 @@ public class TestDeltaLakeDatabricksCheckpointsCompatibility
                         " delta.checkpoint.writeStatsAsStruct = true)",
                 tableName, type, bucketName);
 
-        if (getDatabricksRuntimeVersion().equals(DATABRICKS_91_RUNTIME_VERSION) && type.equals("struct<x bigint>")) {
+        if (databricksRuntimeVersion.equals(DATABRICKS_91_RUNTIME_VERSION) && type.equals("struct<x bigint>")) {
             assertThatThrownBy(() -> onDelta().executeQuery(createTableSql)).hasStackTraceContaining("ParseException");
             throw new SkipException("New runtime version covers the type");
         }

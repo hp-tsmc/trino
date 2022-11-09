@@ -16,7 +16,8 @@ package io.trino.tests.product.deltalake.util;
 import io.trino.tempto.query.QueryResult;
 import org.intellij.lang.annotations.Language;
 
-import static io.trino.tests.product.deltalake.util.DatabricksVersion.UNKNOWN_RUNTIME_VERSION;
+import java.util.Optional;
+
 import static io.trino.tests.product.utils.QueryExecutors.onDelta;
 import static io.trino.tests.product.utils.QueryExecutors.onTrino;
 import static java.lang.String.format;
@@ -30,14 +31,14 @@ public final class DeltaLakeTestUtils
 
     private DeltaLakeTestUtils() {}
 
-    public static DatabricksVersion getDatabricksRuntimeVersion()
+    public static Optional<DatabricksVersion> getDatabricksRuntimeVersion()
     {
         String version = (String) onDelta().executeQuery("SELECT java_method('java.lang.System', 'getenv', 'DATABRICKS_RUNTIME_VERSION')").getOnlyValue();
         // OSS Spark returns null
         if (version.equals("null")) {
-            return UNKNOWN_RUNTIME_VERSION;
+            return Optional.empty();
         }
-        return DatabricksVersion.createFromString(version);
+        return Optional.of(DatabricksVersion.createFromString(version));
     }
 
     public static String getColumnCommentOnTrino(String schemaName, String tableName, String columnName)

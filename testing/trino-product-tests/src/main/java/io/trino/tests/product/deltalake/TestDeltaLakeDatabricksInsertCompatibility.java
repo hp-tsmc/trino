@@ -22,6 +22,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -45,7 +46,7 @@ import static java.util.Arrays.asList;
 public class TestDeltaLakeDatabricksInsertCompatibility
         extends BaseTestDeltaLakeS3Storage
 {
-    private DatabricksVersion databricksRuntimeVersion;
+    private Optional<DatabricksVersion> databricksRuntimeVersion;
 
     @BeforeTestWithContext
     public void setup()
@@ -412,7 +413,7 @@ public class TestDeltaLakeDatabricksInsertCompatibility
                 assertThat(onTrino().executeQuery("SELECT * FROM " + trinoTableName))
                         .containsOnly(expected);
 
-                if ("ZSTD".equals(compressionCodec) && databricksRuntimeVersion.compareTo(DATABRICKS_104_RUNTIME_VERSION) < 0) {
+                if ("ZSTD".equals(compressionCodec) && databricksRuntimeVersion.orElseThrow().isOlderThan(DATABRICKS_104_RUNTIME_VERSION)) {
                     assertQueryFailure(() -> onDelta().executeQuery("SELECT * FROM default." + tableName))
                             .hasMessageContaining("java.lang.ClassNotFoundException: org.apache.hadoop.io.compress.ZStandardCodec");
                 }
