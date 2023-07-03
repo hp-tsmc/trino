@@ -108,3 +108,8 @@ Run a query to see the nodes in the cluster:
 Run a query against the TPCH connector:
 
     SELECT * FROM tpch.tiny.region;
+
+
+Upgrade snakeYaml to 2.00 (all packages)
+Upgrade ivy to 2.5.1 (all packages)
+remove phoenix trino-407 patched jar
