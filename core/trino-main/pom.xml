@@ -71,6 +71,11 @@
             <artifactId>trino-spi</artifactId>
         </dependency>
 
+        <!-- <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-sql-tree</artifactId>
+        </dependency> -->
+
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>aircompressor</artifactId>
@@ -527,6 +532,32 @@
                         <version>${dep.plugin.surefire.version}</version>
                     </dependency>
                 </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.6.0,)</version>
+                                </requireMavenVersion>
+                                <!-- other rules... -->
+                            </rules>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>

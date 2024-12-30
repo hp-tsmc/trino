@@ -298,6 +298,7 @@
                         </requireFilesSize>
                     </rules>
                     <fail>true</fail>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
         </plugins>

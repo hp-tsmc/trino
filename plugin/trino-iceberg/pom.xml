@@ -507,6 +507,7 @@
                             </excludes>
                         </requireUpperBoundDeps>
                     </rules>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
 

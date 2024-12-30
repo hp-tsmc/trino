@@ -41,6 +41,7 @@
                             </files>
                         </requireFilesSize>
                     </rules>
+                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>

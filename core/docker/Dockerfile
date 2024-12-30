@@ -32,8 +32,8 @@ RUN \
     apt-get install -y -q less python3 curl && \
     rm -rf /var/lib/apt/lists/* && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
-    groupadd trino --gid 1000 && \
-    useradd trino --uid 1000 --gid 1000 --create-home && \
+    groupadd trino --gid 1002 && \
+    useradd trino --uid 1002 --gid 1002 --create-home && \
     mkdir -p /usr/lib/trino /data/trino && \
     chown -R "trino:trino" /usr/lib/trino /data/trino
 

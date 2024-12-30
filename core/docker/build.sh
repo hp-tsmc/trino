@@ -37,7 +37,7 @@ rm "${WORK_DIR}/trino-server-${TRINO_VERSION}.tar.gz"
 cp -R bin "${WORK_DIR}/trino-server-${TRINO_VERSION}"
 cp -R default "${WORK_DIR}/"
 
-TAG_PREFIX="hpdevelop/trino:${TRINO_VERSION}-11"
+TAG_PREFIX="hpdevelop/trino:${TRINO_VERSION}-241203"
 
 for arch in "${ARCHITECTURES[@]}"; do
     echo "🫙  Building the image for $arch"
